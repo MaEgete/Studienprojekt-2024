@@ -50,7 +50,10 @@ def crop_face(frame, location):
 def main():
     init_database()
     video_capture = cv2.VideoCapture(0)
+
+    # Lokale Speicherung erkannter Personen
     known_names, known_fingerprints = load_fingerprints_from_database()
+    next_local_id = len(known_names) + 1  # Lokaler Zähler für neue Personen
     frame_skip = 5  # Alle 5 Frames wird gespeichert
     frame_count = 0
 
@@ -64,40 +67,46 @@ def main():
         face_locations = face_recognition.face_locations(rgb_frame)
         face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
 
-        # Alle 5 Frames speichern
-        if frame_count % frame_skip == 0 and len(face_locations) > 0:
-            for location, encoding in zip(face_locations, face_encodings):
-                matches = face_recognition.compare_faces(known_fingerprints, encoding, tolerance=0.6)
-                name = "Unbekannt"
+        # **Frame-Skip-Logik für Speicherung**
+        if frame_count % frame_skip == 0:  # Nur alle 5 Frames speichern
+            print(f"Speichere Gesichter aus Frame {frame_count}")
+            if len(face_locations) > 0:  # Nur wenn Gesichter erkannt wurden
+                for location, encoding in zip(face_locations, face_encodings):
+                    matches = face_recognition.compare_faces(known_fingerprints, encoding, tolerance=0.6)
+                    name = "Unbekannt"
 
-                if True in matches:
-                    match_index = matches.index(True)
-                    name = known_names[match_index]
-                    print(f"Bekannte Person erkannt: {name}")
-                else:
-                    # Neue Person
-                    name = f"PersonId{len(known_names) + 1}"
-                    known_names.append(name)
-                    known_fingerprints.append(encoding)
-                    print(f"Neue Person erkannt: {name}")
+                    if True in matches:
+                        match_index = matches.index(True)
+                        name = known_names[match_index]
+                        print(f"Bekannte Person erkannt: {name}")
+                    else:
+                        # Neue Person
+                        name = f"PersonId{next_local_id}"
+                        next_local_id += 1  # Lokale ID hochzählen
+                        known_names.append(name)
+                        known_fingerprints.append(encoding)
+                        print(f"Neue Person erkannt: {name}")
 
-                # Gesichtsausschnitt speichern
-                face_image = crop_face(frame, location)
-                save_data_to_database(name, encoding, face_image)
+                    # Gesichtsausschnitt speichern
+                    face_image = crop_face(frame, location)
+                    save_data_to_database(name, encoding, face_image)
 
-        # Anzeigen der Erkennung
+        # **Anzeige der Erkennung in jedem Frame**
         for (top, right, bottom, left), encoding in zip(face_locations, face_encodings):
             matches = face_recognition.compare_faces(known_fingerprints, encoding, tolerance=0.6)
             name = "Unbekannt"
             if True in matches:
                 match_index = matches.index(True)
                 name = known_names[match_index]
-            else:
-                name = f"PersonId{len(known_names) + 1}"
 
+            else:
+                name = f"PersonId{next_local_id}"  # Nutze lokale Zählung
+
+            # Zeichne Rechteck und Name auf den Frame
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
             cv2.putText(frame, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
 
+        # Zeige das Video an
         cv2.imshow('Video', frame)
         frame_count += 1
 
@@ -107,6 +116,7 @@ def main():
 
     video_capture.release()
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()
