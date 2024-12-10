@@ -129,7 +129,6 @@ Ein Hilfsskript, um die gespeicherten Bilder aus der Datenbank anzuzeigen.
 ├── face.py           # Hauptskript zur Gesichtserkennung und Speicherung
 ├── loadImages.py     # Skript zur Anzeige und Speicherung der Bilder aus der Datenbank
 ├── faces.db          # SQLite-Datenbank (wird automatisch erstellt)
-├── requirements.txt  # Abhängigkeiten
 └── README.md         # Dokumentation
 ```
 
