@@ -55,7 +55,9 @@ def load_fingerprints_from_database():
     conn.close()  # Verbindung schließen
 
     # Namen und Fingerprints getrennt extrahieren
+    # row[0] = 1. Spalte (Name der Person (String))
     known_names = [row[0] for row in rows]  # Namen
+    # row[1] = 2. Spalte (Fingerprint der Person (BLOB-Format))
     known_fingerprints = [np.frombuffer(row[1], dtype=np.float64) for row in rows]  # Fingerprints
     return known_names, known_fingerprints
 
@@ -86,12 +88,14 @@ def main():
 
     while True:
         # Ein Frame von der Webcam lesen
+        # ret = Return-Wert, ob ein Frame empfangen wurde
+        # frame = Enthält Bild vom aktuellen Frame
         ret, frame = video_capture.read()
         if not ret:
             print("Kein Frame empfangen. Beende Aufnahme.")
             break  # Wenn kein Frame gelesen wird, Aufnahme beenden
 
-        # Konvertiere den Frame in das RGB-Format (für face_recognition erforderlich)
+        #  Frame in das RGB-Format formatieren (für face_recognition erforderlich)
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         # Erkennung von Gesichtern und deren Positionen im Frame
@@ -100,37 +104,38 @@ def main():
         # Kodierung der Gesichter (Fingerprints) basierend auf den erkannten Positionen
         face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
 
-        # **Nur alle 5 Frames speichern (Frame-Skip-Logik)**
+        # Nur alle 5 Frames speichern (Frame-Skip-Logik)
         if frame_count % frame_skip == 0:
-            print(f"Speichere Gesichter aus Frame {frame_count}")
             if len(face_locations) > 0:  # Nur speichern, wenn Gesichter erkannt wurden
                 for location, encoding in zip(face_locations, face_encodings):
                     # Vergleiche den Fingerprint mit gespeicherten Fingerprints
                     matches = face_recognition.compare_faces(known_fingerprints, encoding, tolerance=0.6)
-                    name = "Unbekannt"  # Standard: Unbekannt
 
                     if True in matches:
-                        # Match gefunden: Hole den entsprechenden Namen
+                        # Match gefunden: Namen holen
+                        # Ersten Index der Liste suchen
                         match_index = matches.index(True)
+                        # Namen abrufen
                         name = known_names[match_index]
                         print(f"Bekannte Person erkannt: {name}")
                     else:
-                        # Neue Person erkannt: Weisen Sie eine neue ID zu
+                        # Neue Person erkannt: Neue ID zuweisen
                         name = f"PersonId{next_local_id}"
                         next_local_id += 1  # Zähler erhöhen
                         known_names.append(name)  # Namen hinzufügen
                         known_fingerprints.append(encoding)  # Fingerprint hinzufügen
                         print(f"Neue Person erkannt: {name}")
 
-                    # Schneide das Gesicht aus dem Frame aus und speichere es in der Datenbank
+                    # Gesicht aus dem Frame zuschneiden und in der Datenbank speichern
                     face_image = crop_face(frame, location)
+                    print(f"Speichere Gesichter aus Frame {frame_count}")
                     save_data_to_database(name, encoding, face_image)
 
-        # **Anzeige der Erkennung in jedem Frame**
+        # Anzeige der Erkennung in jedem Frame
         for (top, right, bottom, left), encoding in zip(face_locations, face_encodings):
             # Vergleiche Fingerprint mit bekannten Fingerprints
+            # Toleranz von 0.6 ist von Face_Recognition vorgegeben als bester Wert
             matches = face_recognition.compare_faces(known_fingerprints, encoding, tolerance=0.6)
-            name = "Unbekannt"  # Standard: Unbekannt
 
             if True in matches:
                 # Match gefunden: Bestimme den Namen
@@ -140,15 +145,16 @@ def main():
                 # Keine Übereinstimmung: Weisen Sie eine temporäre ID zu
                 name = f"PersonId{next_local_id}"
 
-                # Zeichne ein Rechteck und den Namen um das erkannte Gesicht
+            # Rechteck um das erkannte Gesicht zeichnen (Grün)
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            # Namen über dem Rechteck schreiben (Grün)
             cv2.putText(frame, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
 
         # Zeige das Video im Fenster an
         cv2.imshow('Video', frame)
         frame_count += 1  # Frame-Zähler erhöhen
 
-        # Brich die Schleife ab, wenn die Taste 'q' gedrückt wird
+        # Schleife abbrechen, wenn die Taste 'q' gedrückt wird
         key = cv2.waitKey(10) & 0xFF
         if key == ord('q'):
             break
@@ -158,6 +164,6 @@ def main():
     cv2.destroyAllWindows()
 
 
-# Startpunkt des Programms
+# Main
 if __name__ == "__main__":
     main()
