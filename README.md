@@ -91,7 +91,7 @@ Ein Hilfsskript, um die gespeicherten Bilder aus der Datenbank anzuzeigen.
 ## Installation und Einrichtung
 
 1. **Abhängigkeiten installieren**:
-   - Python-Version: 3.6 oder höher
+   - Python-Version: 3.6 oder höher (bis 3.10)
    - Installiere die erforderlichen Bibliotheken:
      ```bash
      pip install opencv-python face-recognition numpy
